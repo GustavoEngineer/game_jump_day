@@ -35,12 +35,26 @@ class _MainMenuLayoutState extends State<MainMenuLayout>
       body: SafeArea(
         child: Column(
           children: [
-            // Top Navigation Bar (Industrial Style)
+            // Content Area (Top)
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildHomeTab(),
+                  const ShopScreen(),
+                  const BattlePassScreen(),
+                  const LoginScreen(),
+                ],
+              ),
+            ),
+
+            // Bottom Navigation Bar (Industrial Style)
             Container(
               padding: const EdgeInsets.symmetric(vertical: 8.0),
               decoration: const BoxDecoration(
                 border: Border(
-                  bottom: BorderSide(color: Colors.white24, width: 1),
+                  top: BorderSide(
+                      color: Colors.white24, width: 1), // Border on top now
                 ),
               ),
               child: TabBar(
@@ -51,6 +65,17 @@ class _MainMenuLayoutState extends State<MainMenuLayout>
                 indicatorSize: TabBarIndicatorSize.label,
                 labelColor: Colors.white,
                 unselectedLabelColor: Colors.grey[600],
+                indicatorPadding: const EdgeInsets.only(
+                    bottom: 4), // Push indicator up slightly
+                indicator: const UnderlineTabIndicator(
+                  borderSide: BorderSide(color: Color(0xFFFF9900), width: 4.0),
+                  insets: EdgeInsets.fromLTRB(
+                      0, 0, 0, 40), // Move indicator to top?
+                  // Actually standard indicator is bottom. For top border style, we might want indicator at top?
+                  // Let's stick to standard bottom indicator for now but close to text.
+                ),
+                // Reverting indicator customisation to keep it simple first.
+                // Just moving the block.
                 labelStyle: GoogleFonts.teko(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -66,19 +91,6 @@ class _MainMenuLayoutState extends State<MainMenuLayout>
                   Tab(text: "SHOP"),
                   Tab(text: "PASS"),
                   Tab(text: "LOGIN"),
-                ],
-              ),
-            ),
-
-            // Content Area
-            Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  _buildHomeTab(),
-                  const ShopScreen(),
-                  const BattlePassScreen(),
-                  const LoginScreen(),
                 ],
               ),
             ),

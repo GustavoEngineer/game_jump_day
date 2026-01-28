@@ -29,8 +29,8 @@ class Projectile extends PositionComponent with HasGameRef<JumpDayGame> {
   @override
   void render(Canvas canvas) {
     super.render(canvas);
-    canvas.drawCircle(
-        Offset(width / 2, height / 2), width / 2, Paint()..color = Colors.red);
+    canvas.drawCircle(Offset(width / 2, height / 2), width / 2,
+        Paint()..color = const Color(0xFFFF4400));
   }
 
   bool checkCollision(PositionComponent other) {

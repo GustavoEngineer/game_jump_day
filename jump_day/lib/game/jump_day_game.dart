@@ -15,7 +15,7 @@ class JumpDayGame extends FlameGame with TapCallbacks {
   JumpDayGame({required this.initialLevel});
 
   @override
-  Color backgroundColor() => const Color(0xFF145C5D); // Teal from image
+  Color backgroundColor() => const Color(0xFF111111); // Industrial Dark
 
   Future<void> levelCompleted() async {
     final prefs = await SharedPreferences.getInstance();
@@ -80,10 +80,12 @@ class JumpDayGame extends FlameGame with TapCallbacks {
       for (int i = 0; i < 20; i++) {
         // Random X Position (keeping padding)
         double xPos = random.nextDouble() * (size.x - 150) + 25;
+        // Random Width (60 to 120)
+        double width = random.nextDouble() * 60 + 60;
 
         add(Platform(
             position: Vector2(xPos, currentY),
-            size: Vector2(100, 20), // Standard size
+            size: Vector2(width, 20), // Random size
             isBreakable: (i % 2 != 0), // Every odd platform breaks
             explodeTime: 2.0 // Faster explosion for Level 2
             ));
@@ -98,10 +100,12 @@ class JumpDayGame extends FlameGame with TapCallbacks {
       for (int i = 0; i < 30; i++) {
         // Random X Position
         double xPos = random.nextDouble() * (size.x - 150) + 25;
+        // Random Width (50 to 140)
+        double width = random.nextDouble() * 90 + 50;
 
         add(Platform(
             position: Vector2(xPos, currentY),
-            size: Vector2(120, 20), // Wider platforms
+            size: Vector2(width, 20), // Random size
             isMoving: true, // Moving platforms
             isBreakable: false));
         currentY -= 120;

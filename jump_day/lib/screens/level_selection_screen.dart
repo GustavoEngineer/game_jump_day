@@ -1,5 +1,6 @@
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../game/jump_day_game.dart';
 import '../game/overlays/win_menu.dart';
@@ -28,7 +29,7 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
   Future<void> _loadProgress() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      level2Unlocked = prefs.getBool('level_2_unlocked') ?? false;
+      level2Unlocked = prefs.getBool('leked') ?? false;
       level3Unlocked = prefs.getBool('level_3_unlocked') ?? false;
       level1Completed = prefs.getBool('level_1_completed') ?? false;
       level2Completed = prefs.getBool('level_2_completed') ?? false;
@@ -37,9 +38,10 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
   }
 
   @override
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF222222), // Dark Map Background
+      backgroundColor: const Color(0xFF111111), // Industrial Dark Background
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
           final prefs = await SharedPreferences.getInstance();
@@ -56,6 +58,7 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
           );
         },
         backgroundColor: Colors.redAccent,
+        shape: BeveledRectangleBorder(borderRadius: BorderRadius.zero),
         child: const Icon(Icons.refresh),
       ),
       body: Stack(
@@ -69,20 +72,37 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
 
           // Header
           SafeArea(
-            child: Align(
-              alignment: Alignment.topCenter,
-              child: Padding(
-                padding: const EdgeInsets.only(top: 20.0),
-                child: Text(
-                  "WORLD MAP",
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.9),
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 2,
+            child: Stack(
+              children: [
+                // Back Button
+                Align(
+                  alignment: Alignment.topLeft,
+                  child: Padding(
+                    padding: const EdgeInsets.all(20.0),
+                    child: IconButton(
+                      icon:
+                          const Icon(Icons.arrow_back_ios, color: Colors.white),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
                   ),
                 ),
-              ),
+                // Title
+                Align(
+                  alignment: Alignment.topCenter,
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 20.0),
+                    child: Text(
+                      "WORLD MAP",
+                      style: GoogleFonts.teko(
+                        color: const Color(0xFFFF9900),
+                        fontSize: 48,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 2,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
 
@@ -121,22 +141,20 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
   Widget _buildLevelNode(BuildContext context,
       {required int level, required bool isLocked, required bool isCompleted}) {
     // Colors
-    final Color unlockedColor = const Color(0xFFFFD700); // Gold
-    final Color lockedColor = const Color(0xFF555555); // Grey
-    final Color completedColor = Colors.green;
-
-    final Color nodeColor =
-        isLocked ? lockedColor : (isCompleted ? completedColor : unlockedColor);
-
-    final Color textColor = isLocked ? Colors.white38 : Colors.black87;
+    const Color orangeAccent = Color(0xFFFF9900);
+    const Color darkBg = Color(0xFF1A1A1A);
 
     return GestureDetector(
       onTap: () {
         if (isLocked) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("Level Locked! Complete previous levels first."),
-              duration: Duration(milliseconds: 1000),
+            SnackBar(
+              content: Text(
+                "LOCKED: COMPLETE PREVIOUS MISSION",
+                style: GoogleFonts.teko(fontSize: 20, color: Colors.black),
+              ),
+              backgroundColor: orangeAccent,
+              duration: const Duration(milliseconds: 1000),
               behavior: SnackBarBehavior.floating,
             ),
           );
@@ -166,40 +184,52 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
             width: 80,
             height: 80,
             decoration: BoxDecoration(
-              color: nodeColor,
-              shape: BoxShape.circle,
+              color: isCompleted ? orangeAccent : darkBg,
+              shape: BoxShape.rectangle,
+              borderRadius: BorderRadius.circular(4), // Sharp corners
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.5),
-                  offset: const Offset(0, 5),
+                  color: Colors.black.withOpacity(0.8),
+                  offset: const Offset(4, 4),
                   blurRadius: 10,
                 ),
                 if (!isLocked)
                   BoxShadow(
-                    color: nodeColor.withOpacity(0.6),
+                    color: orangeAccent.withOpacity(0.3),
                     offset: const Offset(0, 0),
                     blurRadius: 15,
-                    spreadRadius: 2,
+                    spreadRadius: 1,
                   ),
               ],
               border: Border.all(
-                color: Colors.white.withOpacity(0.2),
-                width: 3,
+                color: isLocked ? Colors.white12 : orangeAccent,
+                width: 2,
               ),
             ),
             child: Center(
               child: isLocked
-                  ? const Icon(Icons.lock, color: Colors.white38, size: 32)
+                  ? const Icon(Icons.lock_outline,
+                      color: Colors.white24, size: 32)
                   : (isCompleted
-                      ? const Icon(Icons.check, color: Colors.white, size: 40)
+                      ? const Icon(Icons.check, color: Colors.black, size: 40)
                       : Text(
                           "$level",
-                          style: TextStyle(
-                            fontSize: 36,
+                          style: GoogleFonts.teko(
+                            fontSize: 48,
                             fontWeight: FontWeight.bold,
-                            color: textColor,
+                            color: orangeAccent,
                           ),
                         )),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            "ZONE $level",
+            style: GoogleFonts.roboto(
+              fontSize: 12,
+              color: isLocked ? Colors.white24 : Colors.white70,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1,
             ),
           ),
         ],
@@ -208,20 +238,21 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
   }
 }
 
-// Simple Painter to draw a connecting line between nodes
+// Painter to draw a connecting line between nodes
 class PathPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.white.withOpacity(0.1)
+      ..color = const Color(0xFFFF9900).withOpacity(0.3)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 8
-      ..strokeCap = StrokeCap.round;
+      ..strokeWidth = 4
+      ..strokeCap = StrokeCap.square; // Industrial sharp ends
 
     final path = Path();
 
     // Approximate centers based on Positioned values
     // These need to match the logic in build() relatively closely
+    // Adjusting for square center (40, 40)
     final p1 = Offset(size.width * 0.8 + 40,
         size.height * 0.8 - 40); // Level 1 (Right Bottom)
     final p2 = Offset(
@@ -230,8 +261,13 @@ class PathPainter extends CustomPainter {
         size.width * 0.8 + 40, size.height * 0.2 + 40); // Level 3 (Right Top)
 
     path.moveTo(p1.dx, p1.dy);
-    path.quadraticBezierTo(size.width * 0.5, size.height * 0.65, p2.dx, p2.dy);
-    path.quadraticBezierTo(size.width * 0.5, size.height * 0.3, p3.dx, p3.dy);
+    // Use straight lines for industrial look instead of curves?
+    // Or kept bezier but sharper? Let's use straight lines or slight curves.
+    // Making it look like a schematic.
+    path.lineTo(size.width * 0.5, size.height * 0.65);
+    path.lineTo(p2.dx, p2.dy);
+    path.lineTo(size.width * 0.5, size.height * 0.3);
+    path.lineTo(p3.dx, p3.dy);
 
     canvas.drawPath(path, paint);
   }

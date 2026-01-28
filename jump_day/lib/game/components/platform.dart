@@ -37,8 +37,33 @@ class Platform extends PositionComponent with HasGameRef<JumpDayGame> {
   @override
   void render(Canvas canvas) {
     super.render(canvas);
-    final color = _isBreaking ? Colors.redAccent : const Color(0xFF0D3B3C);
-    canvas.drawRect(size.toRect(), Paint()..color = color);
+
+    // Industrial Colors
+    final mainColor = _isBreaking ? Colors.redAccent : const Color(0xFF222222);
+    final accentColor = const Color(0xFFFF9900);
+
+    // Main Body
+    canvas.drawRect(size.toRect(), Paint()..color = mainColor);
+
+    // Top Accent Line (Beam top)
+    if (!_isBreaking) {
+      canvas.drawRect(
+        Rect.fromLTWH(0, 0, width, 4),
+        Paint()..color = accentColor,
+      );
+    }
+
+    // Optional: Side border for detail
+    if (!_isBreaking) {
+      canvas.drawRect(
+        Rect.fromLTWH(0, 0, 2, height),
+        Paint()..color = Colors.white10,
+      );
+      canvas.drawRect(
+        Rect.fromLTWH(width - 2, 0, 2, height),
+        Paint()..color = Colors.white10,
+      );
+    }
   }
 
   void onLanded() {

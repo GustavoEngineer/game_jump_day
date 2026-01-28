@@ -24,7 +24,7 @@ class BlueCube extends PositionComponent with HasGameRef<JumpDayGame> {
   @override
   void render(Canvas canvas) {
     super.render(canvas);
-    canvas.drawRect(size.toRect(), Paint()..color = Colors.blue);
+    canvas.drawRect(size.toRect(), Paint()..color = const Color(0xFFFF9900));
   }
 
   @override
