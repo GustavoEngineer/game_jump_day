@@ -13,6 +13,12 @@ class BlueCube extends PositionComponent with HasGameRef<JumpDayGame> {
   final double jumpForce = -1050.0; // Tuned jump height
   bool hasLeftGround = false; // Track if player started climbing
 
+  // Jump Mechanics Optimization
+  final double kCoyoteTime = 0.15; // 150ms grace period after leaving ground
+  final double kJumpBufferTime = 0.15; // 150ms buffer for early presses
+  double coyoteTimer = 0;
+  double jumpBufferTimer = 0;
+
   BlueCube() : super(size: Vector2.all(50), anchor: Anchor.bottomCenter);
 
   @override
@@ -30,6 +36,10 @@ class BlueCube extends PositionComponent with HasGameRef<JumpDayGame> {
   @override
   void update(double dt) {
     super.update(dt);
+
+    // Timers
+    if (coyoteTimer > 0) coyoteTimer -= dt;
+    if (jumpBufferTimer > 0) jumpBufferTimer -= dt;
 
     // Horizontal Movement (Auto-run + External Force)
     x += (speed * direction + velocityX) * dt;
@@ -51,46 +61,13 @@ class BlueCube extends PositionComponent with HasGameRef<JumpDayGame> {
     double oldY = y;
     y += dy;
 
-    // Check if left ground
-    if (y < gameRef.size.y - 100) {
-      hasLeftGround = true;
-    }
+    // Ground Detection Logic
+    bool isOnGround = false;
 
-    // Platform Collisions (One-way)
-    // Only check if falling
-    if (velocityY > 0) {
-      final platforms = gameRef.children.whereType<Platform>();
-      for (final platform in platforms) {
-        // Check standard AABB collision
-        bool currentOverlap = x + width > platform.x &&
-            x < platform.x + platform.width &&
-            y > platform.y &&
-            y - height < platform.y + platform.height;
-
-        // One-way check: Must have been above previous frame
-        bool wasAbove =
-            oldY <= platform.y; // Using bottom anchor behavior for BlueCube?
-        // Wait, BlueCube anchor is bottomCenter.
-        // So 'y' is the bottom of the cube.
-        // Platform anchor is topLeft.
-        // So comparison: oldY <= platform.y means bottom was above platform top.
-
-        // Let's re-verify anchor. BlueCube is bottomCenter.
-        // y is exactly the bottom edge.
-        // platform.y is top edge.
-
-        if (currentOverlap && wasAbove) {
-          y = platform.y;
-          velocityY = 0;
-          platform.onLanded();
-          break; // Landed
-        }
-      }
-    }
-
-    // Ground Collision
+    // 1. Floor Check
     if (y >= gameRef.size.y) {
       y = gameRef.size.y;
+      isOnGround = true;
 
       if (hasLeftGround) {
         gameRef.gameOver();
@@ -100,6 +77,50 @@ class BlueCube extends PositionComponent with HasGameRef<JumpDayGame> {
         velocityY = 0;
       }
     }
+
+    // 2. Platform Check
+    if (velocityY >= 0) {
+      // Only check if falling or flat
+      final platforms = gameRef.children.whereType<Platform>();
+      for (final platform in platforms) {
+        bool currentOverlap = x + width > platform.x &&
+            x < platform.x + platform.width &&
+            y > platform.y &&
+            y - height < platform.y + platform.height;
+
+        // More lenient check thanks to coyote time, but keep collision precise
+        // Check if we were previously above the platform
+        bool wasAbove = oldY <= platform.y + 5; // Tolerance
+
+        if (currentOverlap && wasAbove) {
+          y = platform.y;
+          velocityY = 0;
+          isOnGround = true;
+          platform.onLanded();
+          break; // Landed
+        }
+      }
+    }
+
+    // 3. Wall Check (Wall Jump support)
+    bool onWall = x <= width / 2 + 10 || x >= gameRef.size.x - width / 2 - 10;
+    if (onWall) {
+      // Wall slide friction could go here, but for now just treat as "ground" for jump purposes
+      isOnGround = true;
+    }
+
+    // Coyote Time Reset
+    if (isOnGround) {
+      coyoteTimer = kCoyoteTime;
+    } else if (y < gameRef.size.y - 100) {
+      hasLeftGround = true;
+    }
+
+    // Jump Execution (Buffer + Coyote)
+    if (jumpBufferTimer > 0 && coyoteTimer > 0) {
+      performJump();
+    }
+
     // Check Win Condition (Top of level)
     if (y < -50) {
       gameRef.levelCompleted();
@@ -107,26 +128,13 @@ class BlueCube extends PositionComponent with HasGameRef<JumpDayGame> {
   }
 
   void jump() {
-    bool onGround = y >= gameRef.size.y;
+    // Register input immediately into buffer
+    jumpBufferTimer = kJumpBufferTime;
+  }
 
-    // Check if near wall (allow wall jump)
-    bool onWall = x <= width / 2 + 10 || x >= gameRef.size.x - width / 2 - 10;
-
-    // Check if on platform
-    bool onPlatform = false;
-    final platforms = gameRef.children.whereType<Platform>();
-    for (final platform in platforms) {
-      // Add epsilon tolerance for Y-axis check (sensitivity fix)
-      if ((y - platform.y).abs() < 5 &&
-          x + width / 2 > platform.x &&
-          x - width / 2 < platform.x + platform.width) {
-        onPlatform = true;
-        break;
-      }
-    }
-
-    if (onGround || onPlatform || onWall) {
-      velocityY = jumpForce;
-    }
+  void performJump() {
+    velocityY = jumpForce;
+    coyoteTimer = 0; // Consume coyote time
+    jumpBufferTimer = 0; // Consume buffer
   }
 }

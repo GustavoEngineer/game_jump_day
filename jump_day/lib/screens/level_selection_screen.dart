@@ -29,7 +29,7 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
   Future<void> _loadProgress() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      level2Unlocked = prefs.getBool('leked') ?? false;
+      level2Unlocked = prefs.getBool('level_2_unlocked') ?? false;
       level3Unlocked = prefs.getBool('level_3_unlocked') ?? false;
       level1Completed = prefs.getBool('level_1_completed') ?? false;
       level2Completed = prefs.getBool('level_2_completed') ?? false;
