@@ -13,7 +13,6 @@ class ShopScreen extends StatefulWidget {
 
 class _ShopScreenState extends State<ShopScreen> {
   late List<Skill> skills;
-  Skill? selectedSkill;
   Skill? selectedSkill; // Track selected skill
 
   @override
