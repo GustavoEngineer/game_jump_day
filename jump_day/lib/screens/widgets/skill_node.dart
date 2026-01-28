@@ -6,18 +6,11 @@ class SkillNodeWidget extends StatelessWidget {
   final Skill skill;
   final bool isSelected;
   final VoidCallback? onTap;
-  final Function(TapDownDetails)? onTapDown;
-  final Function(TapUpDetails)? onTapUp;
-  final VoidCallback? onTapCancel;
-
   const SkillNodeWidget({
     super.key,
     required this.skill,
     required this.isSelected,
     this.onTap,
-    this.onTapDown,
-    this.onTapUp,
-    this.onTapCancel,
   });
 
   @override
@@ -41,9 +34,6 @@ class SkillNodeWidget extends StatelessWidget {
 
     return GestureDetector(
       onTap: onTap,
-      onTapDown: onTapDown,
-      onTapUp: onTapUp,
-      onTapCancel: onTapCancel,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         width: 80,

@@ -14,7 +14,7 @@ class ShopScreen extends StatefulWidget {
 class _ShopScreenState extends State<ShopScreen> {
   late List<Skill> skills;
   Skill? selectedSkill;
-  Skill? heldSkill; // Track skill being held
+  Skill? selectedSkill; // Track selected skill
 
   @override
   void initState() {
@@ -95,28 +95,12 @@ class _ShopScreenState extends State<ShopScreen> {
                               selectedSkill = skill;
                             });
                           },
-                          onTapDown: (_) {
-                            setState(() {
-                              heldSkill = skill;
-                              selectedSkill = skill;
-                            });
-                          },
-                          onTapUp: (_) {
-                            setState(() {
-                              heldSkill = null;
-                            });
-                          },
-                          onTapCancel: () {
-                            setState(() {
-                              heldSkill = null;
-                            });
-                          },
                         ),
                       );
                     }).toList(),
 
-                    // INFO OVERLAY (Visible only when holding)
-                    if (heldSkill != null)
+                    // INFO OVERLAY (Visible when a skill is selected)
+                    if (selectedSkill != null)
                       Positioned(
                         top: 0,
                         left: 0,
@@ -141,14 +125,14 @@ class _ShopScreenState extends State<ShopScreen> {
                           ),
                           child: Row(
                             children: [
-                              Icon(heldSkill!.icon,
+                              Icon(selectedSkill!.icon,
                                   color: Colors.white, size: 32),
                               const SizedBox(width: 16),
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    heldSkill!.name,
+                                    selectedSkill!.name,
                                     style: GoogleFonts.teko(
                                         fontSize: 28,
                                         fontWeight: FontWeight.bold,
@@ -156,7 +140,7 @@ class _ShopScreenState extends State<ShopScreen> {
                                         height: 1.0),
                                   ),
                                   Text(
-                                    heldSkill!.state.name.toUpperCase(),
+                                    selectedSkill!.state.name.toUpperCase(),
                                     style: GoogleFonts.roboto(
                                       fontSize: 10,
                                       color: const Color(0xFFFF9900),
@@ -168,7 +152,7 @@ class _ShopScreenState extends State<ShopScreen> {
                               const SizedBox(width: 32),
                               Expanded(
                                 child: Text(
-                                  heldSkill!.description,
+                                  selectedSkill!.description,
                                   style: GoogleFonts.roboto(
                                     fontSize: 14,
                                     color: Colors.white70,

@@ -33,58 +33,57 @@ class Skill {
 class SkillRepo {
   static List<Skill> getSkills() {
     return [
-      // Root Skills
+      // Root Skill
       Skill(
-        id: 's1',
-        name: 'Windmill',
-        description:
-            'Strike multiple enemies with a devastating 360-degree attack.',
-        levelRequired: 8,
-        cost: 1000,
-        icon: Icons.wind_power,
+        id: 'jump',
+        name: 'Saltar',
+        description: 'La base de todo movimiento. Permite elevarse del suelo.',
+        levelRequired: 1,
+        cost: 0,
+        icon: Icons.arrow_upward,
         state: SkillState.mastered,
         x: 0.1,
         y: 0.5,
       ),
 
-      // Branch 1 - Upper
+      // Branch 1 - Wall Stick
       Skill(
-        id: 'u1',
-        name: 'Vitality',
-        description: 'Increases max health by 20%.',
-        levelRequired: 10,
-        cost: 1500,
-        icon: Icons.favorite,
+        id: 'wall_stick',
+        name: 'Pegarse en las paredes',
+        description: 'Permite aferrarse a las superficies verticales.',
+        levelRequired: 3,
+        cost: 500,
+        icon: Icons.back_hand,
         state: SkillState.available,
-        parentIds: ['s1'],
+        parentIds: ['jump'],
         x: 0.6,
-        y: 0.15, // Spread out vertically
+        y: 0.15,
       ),
 
-      // Branch 2 - Middle
+      // Branch 2 - Double Jump
       Skill(
-        id: 'm1',
-        name: 'Power Strike',
-        description: 'Deal 50% more damage with heavy attacks.',
-        levelRequired: 10,
-        cost: 1500,
-        icon: Icons.flash_on,
-        state: SkillState.available,
-        parentIds: ['s1'],
+        id: 'double_jump',
+        name: 'Saltar en el aire',
+        description: 'Realiza un segundo salto mientras estás en el aire.',
+        levelRequired: 5,
+        cost: 1000,
+        icon: Icons.keyboard_double_arrow_up,
+        state: SkillState.locked,
+        parentIds: ['jump'],
         x: 0.6,
         y: 0.5,
       ),
 
-      // Branch 3 - Lower
+      // Branch 3 - Bounce
       Skill(
-        id: 'l1',
-        name: 'Agility',
-        description: 'Movement speed increased by 15%.',
-        levelRequired: 10,
-        cost: 1500,
-        icon: Icons.directions_run,
-        state: SkillState.available,
-        parentIds: ['s1'],
+        id: 'bounce',
+        name: 'Rebotar al caer',
+        description: 'Si caes al suelo, rebotas automáticamente.',
+        levelRequired: 5,
+        cost: 1000,
+        icon: Icons.sports_basketball,
+        state: SkillState.locked,
+        parentIds: ['jump'],
         x: 0.6,
         y: 0.85,
       ),
