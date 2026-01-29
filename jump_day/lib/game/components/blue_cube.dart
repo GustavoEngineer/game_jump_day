@@ -1,9 +1,16 @@
 import 'package:flame/components.dart';
+import 'package:flame/collisions.dart';
+import 'package:flame/particles.dart';
 import 'package:flutter/material.dart';
+import 'dart:math';
 import 'platform.dart';
 import '../jump_day_game.dart';
 
-class BlueCube extends PositionComponent with HasGameRef<JumpDayGame> {
+import 'finish_line.dart';
+import 'star.dart';
+
+class BlueCube extends PositionComponent
+    with HasGameRef<JumpDayGame>, CollisionCallbacks {
   double speed = 250.0; // Reduced speed
   int direction = 1;
 
@@ -12,6 +19,9 @@ class BlueCube extends PositionComponent with HasGameRef<JumpDayGame> {
   final double gravity = 2600.0; // Stronger gravity for faster fall
   final double jumpForce = -1050.0; // Tuned jump height
   bool hasLeftGround = false; // Track if player started climbing
+
+  // Star collection tracking
+  int starsCollected = 0;
 
   // Jump Mechanics Optimization
   final double kCoyoteTime = 0.15; // 150ms grace period after leaving ground
@@ -24,7 +34,10 @@ class BlueCube extends PositionComponent with HasGameRef<JumpDayGame> {
   @override
   Future<void> onLoad() async {
     super.onLoad();
+    // Start player at the bottom (death line)
     position = Vector2(gameRef.size.x / 2, gameRef.size.y);
+    // Add a hitbox to enable collision with FinishLine and future collectibles
+    add(RectangleHitbox());
   }
 
   @override
@@ -64,11 +77,12 @@ class BlueCube extends PositionComponent with HasGameRef<JumpDayGame> {
     // Ground Detection Logic
     bool isOnGround = false;
 
-    // 1. Floor Check
+    // 1. Floor Check (death line at bottom of screen)
     if (y >= gameRef.size.y) {
       y = gameRef.size.y;
       isOnGround = true;
 
+      // Game over if player fell back to death line after leaving ground
       if (hasLeftGround) {
         gameRef.gameOver();
       }
@@ -81,7 +95,7 @@ class BlueCube extends PositionComponent with HasGameRef<JumpDayGame> {
     // 2. Platform Check
     if (velocityY >= 0) {
       // Only check if falling or flat
-      final platforms = gameRef.children.whereType<Platform>();
+      final platforms = gameRef.world.children.whereType<Platform>();
       for (final platform in platforms) {
         bool currentOverlap = x + width > platform.x &&
             x < platform.x + platform.width &&
@@ -112,7 +126,8 @@ class BlueCube extends PositionComponent with HasGameRef<JumpDayGame> {
     // Coyote Time Reset
     if (isOnGround) {
       coyoteTimer = kCoyoteTime;
-    } else if (y < gameRef.size.y - 100) {
+    } else if (y < gameRef.size.y * 0.8) {
+      // Player has left ground when above 80% of screen height
       hasLeftGround = true;
     }
 
@@ -121,10 +136,7 @@ class BlueCube extends PositionComponent with HasGameRef<JumpDayGame> {
       performJump();
     }
 
-    // Check Win Condition (Top of level)
-    if (y < -50) {
-      gameRef.levelCompleted();
-    }
+    // Win condition now handled via collision with FinishLine
   }
 
   void jump() {
@@ -136,5 +148,77 @@ class BlueCube extends PositionComponent with HasGameRef<JumpDayGame> {
     velocityY = jumpForce;
     coyoteTimer = 0; // Consume coyote time
     jumpBufferTimer = 0; // Consume buffer
+  }
+
+  @override
+  void onCollisionStart(
+      Set<Vector2> intersectionPoints, PositionComponent other) {
+    super.onCollisionStart(intersectionPoints, other);
+    if (other is FinishLine) {
+      // Create victory particles
+      _createVictoryEffect();
+      other.onPlayerCrossed();
+      gameRef.levelCompleted(starsCollected);
+    } else if (other is Star) {
+      other.collect();
+      starsCollected++;
+      // Create collection feedback particles
+      _createStarCollectionEffect();
+    }
+  }
+
+  void _createVictoryEffect() {
+    final particleComponent = ParticleSystemComponent(
+      particle: Particle.generate(
+        count: 50,
+        lifespan: 1.5,
+        generator: (i) => AcceleratedParticle(
+          acceleration: Vector2(0, -100),
+          speed: Vector2(
+            (Random().nextDouble() - 0.5) * 300,
+            (Random().nextDouble() - 0.5) * 300,
+          ),
+          position: position.clone(),
+          child: CircleParticle(
+            radius: 2 + Random().nextDouble() * 4,
+            paint: Paint()
+              ..color = [
+                Colors.green,
+                Colors.yellow,
+                Colors.orange,
+                Colors.white,
+              ][Random().nextInt(4)]
+                  .withOpacity(0.8),
+          ),
+        ),
+      ),
+      position: Vector2.zero(),
+    );
+
+    gameRef.add(particleComponent);
+  }
+
+  void _createStarCollectionEffect() {
+    final particleComponent = ParticleSystemComponent(
+      particle: Particle.generate(
+        count: 15,
+        lifespan: 0.6,
+        generator: (i) => AcceleratedParticle(
+          acceleration: Vector2(0, -150),
+          speed: Vector2(
+            (Random().nextDouble() - 0.5) * 150,
+            (Random().nextDouble() - 0.5) * 150,
+          ),
+          position: position.clone(),
+          child: CircleParticle(
+            radius: 1 + Random().nextDouble() * 2,
+            paint: Paint()..color = Colors.yellow.withOpacity(0.8),
+          ),
+        ),
+      ),
+      position: Vector2.zero(),
+    );
+
+    gameRef.add(particleComponent);
   }
 }

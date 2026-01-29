@@ -2,9 +2,11 @@ import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:math' as math;
 import '../game/jump_day_game.dart';
 import '../game/overlays/win_menu.dart';
 import '../game/overlays/game_over_menu.dart';
+import '../game/overlays/hud_overlay.dart';
 
 class LevelSelectionScreen extends StatefulWidget {
   const LevelSelectionScreen({super.key});
@@ -19,6 +21,9 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
   bool level1Completed = false;
   bool level2Completed = false;
   bool level3Completed = false;
+  int level1Stars = 0;
+  int level2Stars = 0;
+  int level3Stars = 0;
 
   @override
   void initState() {
@@ -34,6 +39,9 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
       level1Completed = prefs.getBool('level_1_completed') ?? false;
       level2Completed = prefs.getBool('level_2_completed') ?? false;
       level3Completed = prefs.getBool('level_3_completed') ?? false;
+      level1Stars = prefs.getInt('level_1_stars') ?? 0;
+      level2Stars = prefs.getInt('level_2_stars') ?? 0;
+      level3Stars = prefs.getInt('level_3_stars') ?? 0;
     });
   }
 
@@ -52,6 +60,9 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
             level1Completed = false;
             level2Completed = false;
             level3Completed = false;
+            level1Stars = 0;
+            level2Stars = 0;
+            level3Stars = 0;
           });
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text("Progress Reset!")),
@@ -113,7 +124,8 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
             child: _buildLevelNode(context,
                 level: 3,
                 isLocked: !level3Unlocked,
-                isCompleted: level3Completed),
+                isCompleted: level3Completed,
+                stars: level3Stars),
           ),
 
           // Level 2 (Middle)
@@ -123,7 +135,8 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
             child: _buildLevelNode(context,
                 level: 2,
                 isLocked: !level2Unlocked,
-                isCompleted: level2Completed),
+                isCompleted: level2Completed,
+                stars: level2Stars),
           ),
 
           // Level 1 (Bottom)
@@ -131,7 +144,10 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
             bottom: MediaQuery.of(context).size.height * 0.2,
             right: MediaQuery.of(context).size.width * 0.2,
             child: _buildLevelNode(context,
-                level: 1, isLocked: false, isCompleted: level1Completed),
+                level: 1,
+                isLocked: false,
+                isCompleted: level1Completed,
+                stars: level1Stars),
           ),
         ],
       ),
@@ -139,7 +155,10 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
   }
 
   Widget _buildLevelNode(BuildContext context,
-      {required int level, required bool isLocked, required bool isCompleted}) {
+      {required int level,
+      required bool isLocked,
+      required bool isCompleted,
+      required int stars}) {
     // Colors
     const Color orangeAccent = Color(0xFFFF9900);
     const Color darkBg = Color(0xFF1A1A1A);
@@ -165,10 +184,12 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
               builder: (context) => GameWidget(
                 game: JumpDayGame(initialLevel: level),
                 overlayBuilderMap: {
+                  'HUD': (context, JumpDayGame game) => HudOverlay(game: game),
                   'WinMenu': (context, JumpDayGame game) => WinMenu(game: game),
                   'GameOverMenu': (context, JumpDayGame game) =>
                       GameOverMenu(game: game),
                 },
+                initialActiveOverlays: const ['HUD'],
               ),
             ),
           )
@@ -232,6 +253,25 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
               letterSpacing: 1,
             ),
           ),
+          if (!isLocked && isCompleted) ...[
+            const SizedBox(height: 4),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(3, (index) {
+                final isCollected = index < stars;
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 2.0),
+                  child: CustomPaint(
+                    size: const Size(16, 16),
+                    painter: LevelStarPainter(
+                      isCollected: isCollected,
+                      color: isCollected ? orangeAccent : Colors.grey.shade800,
+                    ),
+                  ),
+                );
+              }),
+            ),
+          ],
         ],
       ),
     );
@@ -274,4 +314,46 @@ class PathPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(CustomPainter oldDelegate) => false;
+}
+
+// Painter for small stars in level selection
+class LevelStarPainter extends CustomPainter {
+  final bool isCollected;
+  final Color color;
+
+  LevelStarPainter({required this.isCollected, required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = isCollected ? PaintingStyle.fill : PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2 - 2;
+    final innerRadius = radius * 0.4;
+
+    // Create 5-pointed star path
+    final path = Path();
+    for (int i = 0; i < 10; i++) {
+      final angle = (i * math.pi / 5) - math.pi / 2;
+      final r = i % 2 == 0 ? radius : innerRadius;
+      final x = center.dx + math.cos(angle) * r;
+      final y = center.dy + math.sin(angle) * r;
+
+      if (i == 0) {
+        path.moveTo(x, y);
+      } else {
+        path.lineTo(x, y);
+      }
+    }
+    path.close();
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(LevelStarPainter oldDelegate) =>
+      oldDelegate.isCollected != isCollected || oldDelegate.color != color;
 }

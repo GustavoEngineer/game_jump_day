@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../jump_day_game.dart';
+import 'dart:math' as math;
 
 import 'package:google_fonts/google_fonts.dart';
 
@@ -10,6 +11,9 @@ class WinMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Get the stars collected from the player
+    final starsCollected = game.cube?.starsCollected ?? 0;
+
     return Center(
       child: Container(
         width: 350,
@@ -48,7 +52,38 @@ class WinMenu extends StatelessWidget {
                 letterSpacing: 3,
               ),
             ),
-            const SizedBox(height: 40),
+            const SizedBox(height: 30),
+
+            // Stars Display
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(3, (index) {
+                final isCollected = index < starsCollected;
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  child: CustomPaint(
+                    size: const Size(50, 50),
+                    painter: StarPainter(
+                      isCollected: isCollected,
+                      color: isCollected
+                          ? const Color(0xFFFFD700)
+                          : Colors.grey.shade700,
+                    ),
+                  ),
+                );
+              }),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              "$starsCollected / 3 STARS",
+              style: GoogleFonts.roboto(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 2,
+              ),
+            ),
+            const SizedBox(height: 30),
             ElevatedButton(
               onPressed: () {
                 Navigator.of(context).pop();
@@ -74,4 +109,57 @@ class WinMenu extends StatelessWidget {
       ),
     );
   }
+}
+
+// Custom painter for drawing pixel art stars
+class StarPainter extends CustomPainter {
+  final bool isCollected;
+  final Color color;
+
+  StarPainter({required this.isCollected, required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = isCollected ? PaintingStyle.fill : PaintingStyle.stroke
+      ..strokeWidth = 2;
+
+    final borderPaint = Paint()
+      ..color = Colors.black
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2 - 4;
+    final innerRadius = radius * 0.4;
+
+    // Create 5-pointed star path
+    final path = Path();
+    for (int i = 0; i < 10; i++) {
+      final angle = (i * math.pi / 5) - math.pi / 2;
+      final r = i % 2 == 0 ? radius : innerRadius;
+      final x = center.dx + math.cos(angle) * r;
+      final y = center.dy + math.sin(angle) * r;
+
+      if (i == 0) {
+        path.moveTo(x, y);
+      } else {
+        path.lineTo(x, y);
+      }
+    }
+    path.close();
+
+    // Draw star
+    if (isCollected) {
+      canvas.drawPath(path, paint);
+      canvas.drawPath(path, borderPaint);
+    } else {
+      canvas.drawPath(path, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(StarPainter oldDelegate) =>
+      oldDelegate.isCollected != isCollected || oldDelegate.color != color;
 }
