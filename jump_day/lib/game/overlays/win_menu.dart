@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flame/game.dart';
+import 'hud_overlay.dart';
+import 'game_over_menu.dart';
 import '../jump_day_game.dart';
 import 'dart:math' as math;
 
@@ -86,7 +89,25 @@ class WinMenu extends StatelessWidget {
             const SizedBox(height: 30),
             ElevatedButton(
               onPressed: () {
-                Navigator.of(context).pop();
+                if (game.initialLevel > 0 && game.initialLevel < 3) {
+                  // Go to next level
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(
+                      builder: (context) => GameWidget(
+                        game: JumpDayGame(initialLevel: game.initialLevel + 1),
+                        overlayBuilderMap: {
+                          'HUD': (context, JumpDayGame game) => HudOverlay(game: game),
+                          'WinMenu': (context, JumpDayGame game) => WinMenu(game: game),
+                          'GameOverMenu': (context, JumpDayGame game) =>
+                              GameOverMenu(game: game),
+                        },
+                        initialActiveOverlays: const ['HUD'],
+                      ),
+                    ),
+                  );
+                } else {
+                  Navigator.of(context).pop();
+                }
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFFF9900),
@@ -97,13 +118,26 @@ class WinMenu extends StatelessWidget {
                     const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
               ),
               child: Text(
-                "RETURN TO BASE",
+                game.initialLevel < 3 && game.initialLevel > 0 
+                  ? "NEXT MISSION" 
+                  : "RETURN TO BASE",
                 style: GoogleFonts.teko(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                 ),
               ),
             ),
+            if (game.initialLevel > 0 && game.initialLevel < 3)
+              Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text(
+                    "EXIT TO MAP",
+                    style: GoogleFonts.teko(color: Colors.white54, fontSize: 18),
+                  ),
+                ),
+              ),
           ],
         ),
       ),

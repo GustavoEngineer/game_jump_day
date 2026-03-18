@@ -5,6 +5,9 @@ import 'package:flutter/material.dart';
 import 'dart:math';
 import 'platform.dart';
 import '../jump_day_game.dart';
+import '../../models/skill_data.dart';
+import '../../models/skin_selection_service.dart';
+import '../../models/playable_character.dart';
 
 import 'finish_line.dart';
 import 'star.dart';
@@ -29,21 +32,97 @@ class BlueCube extends PositionComponent
   double coyoteTimer = 0;
   double jumpBufferTimer = 0;
 
-  BlueCube() : super(size: Vector2.all(50), anchor: Anchor.bottomCenter);
+  // ── Sprite support ──────────────────────────────────────────────────────────
+  // Se carga dinámicamente; si no existe el archivo, se usa el render() fallback.
+  SpriteComponent? _spriteComponent;
+  SpriteAnimationComponent? _animationComponent;
+  bool _useSprite = false;
+  bool _isJumping = false;
+
+  PlayableCharacter? _character;
+
+  BlueCube({PlayableCharacter? character}) : super(size: Vector2.all(50), anchor: Anchor.bottomCenter) {
+    _character = character;
+  }
 
   @override
   Future<void> onLoad() async {
     super.onLoad();
-    // Start player at the bottom (death line)
     position = Vector2(gameRef.size.x / 2, gameRef.size.y);
-    // Add a hitbox to enable collision with FinishLine and future collectibles
-    add(RectangleHitbox());
+    
+    // Tighten hitbox even more. 
+    // Moving the hitbox slightly down (position Y) to match the sprite's feet.
+    add(RectangleHitbox(
+      size: Vector2(size.x * 0.6, size.y * 0.8),
+      position: Vector2(size.x * 0.2, size.y * 0.2),
+    ));
+
+    if (_character == null) {
+      _character = await SkinSelectionService.loadSelectedSkin();
+    }
+    await _tryLoadSprites();
   }
+
+  /// Intenta cargar los sprites y animaciones del jugador.
+  Future<void> _tryLoadSprites() async {
+    final rawFolder = _character?.assetFolder ?? 'player/';
+    final folder = rawFolder.replaceAll('assets/images/', '');
+    final characterName = _character?.name.replaceAll(' ', '_') ?? 'player';
+
+    try {
+      // Cargar Animación Idle (4 frames)
+      final idleImage = await gameRef.images.load('${folder}${characterName}_Idle_4.png');
+      final idleAnimation = SpriteAnimation.fromFrameData(
+        idleImage,
+        SpriteAnimationData.sequenced(
+          amount: 4,
+          stepTime: 0.15,
+          textureSize: Vector2.all(32), // Los sprites originales suelen ser 32x32
+        ),
+      );
+
+      // Cargar Animación Salto (8 frames)
+      final jumpImage = await gameRef.images.load('${folder}${characterName}_Jump_8.png');
+      final jumpAnimation = SpriteAnimation.fromFrameData(
+        jumpImage,
+        SpriteAnimationData.sequenced(
+          amount: 8,
+          stepTime: 0.1,
+          textureSize: Vector2.all(32),
+          loop: false, // El salto no suele loopear
+        ),
+      );
+
+    // Increase position Y offset even more to fix floating
+    // 24.0 pixels should firmly place feet on the ground.
+    _animationComponent = SpriteAnimationComponent(
+        animation: idleAnimation,
+        size: size,
+        anchor: Anchor.bottomCenter,
+        position: Vector2(0, 24), 
+      )..playing = true;
+
+      // Guardar animaciones para swichtar
+      _idleAnimation = idleAnimation;
+      _jumpAnimation = jumpAnimation;
+
+      add(_animationComponent!);
+      _useSprite = true;
+    } catch (e) {
+      debugPrint('Error loading sprites: $e');
+      _useSprite = false;
+    }
+  }
+
+  SpriteAnimation? _idleAnimation;
+  SpriteAnimation? _jumpAnimation;
 
   @override
   void render(Canvas canvas) {
     super.render(canvas);
-    canvas.drawRect(size.toRect(), Paint()..color = const Color(0xFFFF9900));
+    if (!_useSprite) {
+      canvas.drawRect(size.toRect(), Paint()..color = const Color(0xFFFF9900));
+    }
   }
 
   @override
@@ -64,8 +143,10 @@ class BlueCube extends PositionComponent
     // Bounce check
     if (x >= gameRef.size.x - width / 2) {
       direction = -1;
+      _flipSprite();
     } else if (x <= width / 2) {
       direction = 1;
+      _flipSprite();
     }
 
     // Vertical Physics
@@ -77,16 +158,17 @@ class BlueCube extends PositionComponent
     // Ground Detection Logic
     bool isOnGround = false;
 
-    // 1. Floor Check (death line at bottom of screen)
-    if (y >= gameRef.size.y) {
+    // 1. Fall Off Screen Check (Immediate Game Over)
+    final viewportBottom = gameRef.camera.viewfinder.position.y + gameRef.size.y;
+    if (y > viewportBottom + 100) { // Give a tiny bit of leeway
+      gameRef.gameOver();
+      return; // Stop update
+    }
+
+    // 2. Initial Floor (Only for the very first jump)
+    if (y >= gameRef.size.y && !hasLeftGround) {
       y = gameRef.size.y;
       isOnGround = true;
-
-      // Game over if player fell back to death line after leaving ground
-      if (hasLeftGround) {
-        gameRef.gameOver();
-      }
-
       if (velocityY > 0) {
         velocityY = 0;
       }
@@ -116,18 +198,20 @@ class BlueCube extends PositionComponent
       }
     }
 
-    // 3. Wall Check (Wall Jump support)
+    // 3. Wall Check
     bool onWall = x <= width / 2 + 10 || x >= gameRef.size.x - width / 2 - 10;
     if (onWall) {
-      // Wall slide friction could go here, but for now just treat as "ground" for jump purposes
       isOnGround = true;
     }
 
     // Coyote Time Reset
     if (isOnGround) {
       coyoteTimer = kCoyoteTime;
+      if (_isJumping) {
+        _isJumping = false;
+        _updateSpriteState();
+      }
     } else if (y < gameRef.size.y * 0.8) {
-      // Player has left ground when above 80% of screen height
       hasLeftGround = true;
     }
 
@@ -146,8 +230,33 @@ class BlueCube extends PositionComponent
 
   void performJump() {
     velocityY = jumpForce;
-    coyoteTimer = 0; // Consume coyote time
-    jumpBufferTimer = 0; // Consume buffer
+    coyoteTimer = 0; 
+    jumpBufferTimer = 0;
+    _isJumping = true;
+    _updateSpriteState();
+  }
+
+  /// Voltea el sprite horizontalmente según la dirección del personaje.
+  void _flipSprite() {
+    if (_animationComponent != null) {
+      _animationComponent!.scale = Vector2(direction.toDouble(), 1);
+    }
+  }
+
+  /// Cambia el sprite según el estado (salto / suelo).
+  void _updateSpriteState() {
+    if (_animationComponent == null) return;
+    
+    if (_isJumping) {
+      if (_jumpAnimation != null) {
+        _animationComponent!.animation = _jumpAnimation;
+        _animationComponent!.animationTicker?.reset();
+      }
+    } else {
+      if (_idleAnimation != null) {
+        _animationComponent!.animation = _idleAnimation;
+      }
+    }
   }
 
   @override
@@ -197,6 +306,7 @@ class BlueCube extends PositionComponent
 
     gameRef.add(particleComponent);
   }
+
 
   void _createStarCollectionEffect() {
     final particleComponent = ParticleSystemComponent(

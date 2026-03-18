@@ -9,6 +9,8 @@ import 'components/platform.dart';
 import 'components/projectile.dart';
 import 'components/finish_line.dart';
 import 'components/star.dart';
+import '../models/skin_selection_service.dart';
+import '../models/playable_character.dart';
 
 class JumpDayGame extends FlameGame with TapCallbacks, HasCollisionDetection {
   final int initialLevel;
@@ -77,33 +79,49 @@ class JumpDayGame extends FlameGame with TapCallbacks, HasCollisionDetection {
   }
 
   Future<void> _startLevel() async {
-    // Reset highest Y reached
-    _highestYReached = double.infinity;
-
-    // Remove only game entities, leaving engine components intact
+    // Limpieza y declaración única de variables
+    _highestYReached = 0; // Highest Y (climbing up is lower Y)
+    _cameraHighestY = 0;
+    camera.viewfinder.position = Vector2.zero();
+    
     world.children.whereType<Platform>().forEach((c) => c.removeFromParent());
     world.children.whereType<BlueCube>().forEach((c) => c.removeFromParent());
     world.children.whereType<FinishLine>().forEach((c) => c.removeFromParent());
     world.children.whereType<Star>().forEach((c) => c.removeFromParent());
     children.whereType<TimerComponent>().forEach((c) => c.removeFromParent());
-    children
-        .whereType<ParticleSystemComponent>()
-        .forEach((c) => c.removeFromParent());
+    children.whereType<ParticleSystemComponent>().forEach((c) => c.removeFromParent());
     children.whereType<Projectile>().forEach((c) => c.removeFromParent());
-
-    // Game logic: generate platforms until we reach a vertical target height
-    final double targetHeight = 5000.0; // Generate a level of 5000px tall
+    final selectedCharacter = await SkinSelectionService.loadSelectedSkin();
+    final double targetHeight = 5000.0;
     final random = Random();
 
-    if (initialLevel == 1) {
+    if (initialLevel == 0) {
+      // Infinite Mode Initialization
+      _lastGeneratedY = size.y - 120;
+      double currentY = size.y - 120;
+      
+      // Start with some initial platforms
+      for (int i = 0; i < 10; i++) {
+        double xPos = random.nextDouble() * (size.x - 150) + 25;
+        world.add(Platform(
+          position: Vector2(xPos, currentY),
+          size: Vector2(100, 20),
+          isBreakable: false,
+        ));
+        currentY -= 120;
+      }
+      _lastGeneratedY = currentY;
+      
+      cube = BlueCube(character: selectedCharacter);
+      await world.add(cube!);
+    } else if (initialLevel == 1) {
       double currentY = size.y - 120;
       bool leftSide = true;
       while (currentY > size.y - targetHeight) {
         final platformWidth = 100.0;
-        // Position platforms closer to center for easier jumps
         final xPos = leftSide
-            ? size.x * 0.3 - platformWidth / 2 // Left side at 30%
-            : size.x * 0.7 - platformWidth / 2; // Right side at 70%
+            ? size.x * 0.3 - platformWidth / 2
+            : size.x * 0.7 - platformWidth / 2;
         world.add(Platform(
             position: Vector2(xPos, currentY),
             size: Vector2(platformWidth, 20),
@@ -112,19 +130,10 @@ class JumpDayGame extends FlameGame with TapCallbacks, HasCollisionDetection {
         currentY -= 110;
         leftSide = !leftSide;
       }
-
-      // Add 3 stars strategically placed (easy level)
-      // Star 1: Lower third (easy)
-      world.add(
-          Star(position: Vector2(size.x / 2, size.y - targetHeight * 0.25)));
-      // Star 2: Middle third (medium)
-      world.add(
-          Star(position: Vector2(size.x * 0.3, size.y - targetHeight * 0.5)));
-      // Star 3: Upper third (hard)
-      world.add(
-          Star(position: Vector2(size.x * 0.7, size.y - targetHeight * 0.8)));
-
-      cube = BlueCube();
+      world.add(Star(position: Vector2(size.x / 2, size.y - targetHeight * 0.25)));
+      world.add(Star(position: Vector2(size.x * 0.3, size.y - targetHeight * 0.5)));
+      world.add(Star(position: Vector2(size.x * 0.7, size.y - targetHeight * 0.8)));
+      cube = BlueCube(character: selectedCharacter);
       await world.add(cube!);
     } else if (initialLevel == 2) {
       double currentY = size.y - 120;
@@ -132,7 +141,6 @@ class JumpDayGame extends FlameGame with TapCallbacks, HasCollisionDetection {
       while (currentY > size.y - targetHeight) {
         double xPos = random.nextDouble() * (size.x - 150) + 25;
         double width = random.nextDouble() * 60 + 60;
-
         world.add(Platform(
             position: Vector2(xPos, currentY),
             size: Vector2(width, 20),
@@ -141,26 +149,16 @@ class JumpDayGame extends FlameGame with TapCallbacks, HasCollisionDetection {
         currentY -= 120;
         index++;
       }
-
-      // Add 3 stars strategically placed (medium difficulty with breakable platforms)
-      // Star 1: Lower third (easy)
-      world.add(
-          Star(position: Vector2(size.x * 0.4, size.y - targetHeight * 0.3)));
-      // Star 2: Middle third (on/near breakable platform)
-      world.add(
-          Star(position: Vector2(size.x * 0.6, size.y - targetHeight * 0.55)));
-      // Star 3: Upper third (challenging)
-      world.add(
-          Star(position: Vector2(size.x * 0.35, size.y - targetHeight * 0.85)));
-
-      cube = BlueCube();
+      world.add(Star(position: Vector2(size.x * 0.4, size.y - targetHeight * 0.3)));
+      world.add(Star(position: Vector2(size.x * 0.6, size.y - targetHeight * 0.55)));
+      world.add(Star(position: Vector2(size.x * 0.35, size.y - targetHeight * 0.85)));
+      cube = BlueCube(character: selectedCharacter);
       await world.add(cube!);
     } else if (initialLevel == 3) {
       double currentY = size.y - 120;
       while (currentY > size.y - targetHeight) {
         double xPos = random.nextDouble() * (size.x - 150) + 25;
         double width = random.nextDouble() * 90 + 50;
-
         world.add(Platform(
             position: Vector2(xPos, currentY),
             size: Vector2(width, 20),
@@ -168,8 +166,6 @@ class JumpDayGame extends FlameGame with TapCallbacks, HasCollisionDetection {
             isBreakable: false));
         currentY -= 120;
       }
-
-      // Spawn Projectiles every 5 seconds
       add(TimerComponent(
           period: 5,
           repeat: true,
@@ -177,79 +173,76 @@ class JumpDayGame extends FlameGame with TapCallbacks, HasCollisionDetection {
             double projectileX = random.nextDouble() * (size.x - 20);
             add(Projectile(position: Vector2(projectileX, -50)));
           }));
-
-      // Add 3 stars strategically placed (hard difficulty with moving platforms and projectiles)
-      // Star 1: Lower third (moderate)
-      world.add(
-          Star(position: Vector2(size.x * 0.25, size.y - targetHeight * 0.28)));
-      // Star 2: Middle third (risky - near projectile spawn area)
-      world.add(
-          Star(position: Vector2(size.x * 0.65, size.y - targetHeight * 0.5)));
-      // Star 3: Upper third (very challenging)
-      world.add(
-          Star(position: Vector2(size.x * 0.45, size.y - targetHeight * 0.9)));
-
-      cube = BlueCube();
+      world.add(Star(position: Vector2(size.x * 0.25, size.y - targetHeight * 0.28)));
+      world.add(Star(position: Vector2(size.x * 0.65, size.y - targetHeight * 0.5)));
+      world.add(Star(position: Vector2(size.x * 0.45, size.y - targetHeight * 0.9)));
+      cube = BlueCube(character: selectedCharacter);
       await world.add(cube!);
     }
 
-    // Add a visible FinishLine at the top of the generated area
-    world.add(FinishLine(
-        position: Vector2(0, size.y - targetHeight),
-        size: Vector2(size.x, 10)));
+    if (initialLevel != 0) {
+      world.add(FinishLine(
+          position: Vector2(0, size.y - targetHeight),
+          size: Vector2(size.x, 10)));
+    }
   }
-
   @override
   void update(double dt) {
     super.update(dt);
-
-    // Move the world downward only after player passes the scroll threshold
-    if (cube != null && cube!.hasLeftGround) {
-      // Track the highest point the player has reached
-      if (cube!.y < _highestYReached) {
-        _highestYReached = cube!.y;
+    
+    if (cube != null) {
+      // Camera follow logic
+      final playerY = cube!.y;
+      
+      // We only move the camera up, never down
+      // Let's make it follow the player such that player is at 70% of screen height
+      double desiredCameraY = playerY - size.y * 0.7;
+      
+      // But camera Y should not go below _highestYReached camera position (to prevent falling down)
+      // Actually simpler: track the highest point the camera has reached.
+      if (desiredCameraY < _cameraHighestY) {
+        _cameraHighestY = desiredCameraY;
       }
 
-      // Only start scrolling if player has crossed the threshold
-      // and is currently above the target position
-      final bool hasPassedThreshold = _highestYReached < _scrollThreshold;
-      final bool isAboveTarget = cube!.y < _playerTargetY;
+      // Smoothly move camera towards the highest desired position
+      // For now, let's keep it locked to avoid lag in a fast game
+      camera.viewfinder.position = Vector2(0, _cameraHighestY);
+    }
 
-      if (hasPassedThreshold && isAboveTarget) {
-        final scrollAmount = worldScrollSpeed * dt;
+    // Infinite mode platform generation
+    if (initialLevel == 0 && cube != null) {
+      _checkAndGenerateInfinitePlatforms();
+    }
+  }
 
-        // Move all world objects down
-        for (final platform in world.children.whereType<Platform>()) {
-          platform.y += scrollAmount;
-          // Remove platforms that are way below screen
-          if (platform.y > size.y + 100) {
-            platform.removeFromParent();
-          }
-        }
+  double _cameraHighestY = 0;
+  double _lastGeneratedY = 0;
 
-        for (final star in world.children.whereType<Star>()) {
-          star.y += scrollAmount;
-        }
+  void _checkAndGenerateInfinitePlatforms() {
+    final viewportTop = camera.viewfinder.position.y;
+    final random = Random();
+    
+    while (_lastGeneratedY > viewportTop - size.y) {
+      double xPos = random.nextDouble() * (size.x - 100) + 20;
+      double width = random.nextDouble() * 60 + 60;
+      bool isBreakable = random.nextDouble() > 0.8;
+      bool isMoving = random.nextDouble() > 0.9;
 
-        for (final finishLine in world.children.whereType<FinishLine>()) {
-          finishLine.y += scrollAmount;
-        }
+      world.add(Platform(
+        position: Vector2(xPos, _lastGeneratedY),
+        size: Vector2(width, 20),
+        isBreakable: isBreakable,
+        isMoving: isMoving,
+        explodeTime: 1.5,
+      ));
 
-        for (final projectile in children.whereType<Projectile>()) {
-          projectile.y += scrollAmount;
-        }
-
-        // Gently push player back to target Y position
-        final diff = _playerTargetY - cube!.y;
-        cube!.y += diff * 0.02; // Gentle push
-      }
+      _lastGeneratedY -= 120 + random.nextDouble() * 40;
     }
   }
 
   @override
   void onTapDown(TapDownEvent event) {
-    if (initialLevel >= 1 && initialLevel <= 3) {
-      cube?.jump();
-    }
+    super.onTapDown(event);
+    cube?.jump();
   }
 }

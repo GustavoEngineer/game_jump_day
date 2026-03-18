@@ -50,14 +50,14 @@ class SkillRepo {
       Skill(
         id: 'wall_stick',
         name: 'Pegarse en las paredes',
-        description: 'Permite aferrarse a las superficies verticales.',
+        description: 'Permite aferrarse a las superficies verticales y saltar desde ellas.',
         levelRequired: 3,
         cost: 500,
         icon: Icons.back_hand,
         state: SkillState.available,
         parentIds: ['jump'],
-        x: 0.6,
-        y: 0.15,
+        x: 0.4,
+        y: 0.2,
       ),
 
       // Branch 2 - Double Jump
@@ -70,22 +70,78 @@ class SkillRepo {
         icon: Icons.keyboard_double_arrow_up,
         state: SkillState.locked,
         parentIds: ['jump'],
-        x: 0.6,
+        x: 0.4,
         y: 0.5,
       ),
 
-      // Branch 3 - Bounce
+      // Branch 3 - Power Jump
       Skill(
-        id: 'bounce',
-        name: 'Rebotar al caer',
-        description: 'Si caes al suelo, rebotas automáticamente.',
-        levelRequired: 5,
-        cost: 1000,
-        icon: Icons.sports_basketball,
-        state: SkillState.locked,
+        id: 'power_jump',
+        name: 'Salto Potenciado',
+        description: 'Aumenta la fuerza de tus saltos un 20%.',
+        levelRequired: 2,
+        cost: 300,
+        icon: Icons.expand_less,
+        state: SkillState.available,
         parentIds: ['jump'],
-        x: 0.6,
-        y: 0.85,
+        x: 0.4,
+        y: 0.8,
+      ),
+
+      // Advanced - Magnet
+      Skill(
+        id: 'magnet',
+        name: 'Imán de Estrellas',
+        description: 'Atrae las estrellas cercanas automáticamente.',
+        levelRequired: 6,
+        cost: 1500,
+        icon: Icons.adjust,
+        state: SkillState.locked,
+        parentIds: ['double_jump'],
+        x: 0.7,
+        y: 0.5,
+      ),
+
+      // Advanced - Glide
+      Skill(
+        id: 'glide',
+        name: 'Planeo Suave',
+        description: 'Mantén presionado para descender lentamente.',
+        levelRequired: 10,
+        cost: 3000,
+        icon: Icons.air,
+        state: SkillState.locked,
+        parentIds: ['wall_stick'],
+        x: 0.7,
+        y: 0.2,
+      ),
+
+      // Advanced - Shield
+      Skill(
+        id: 'shield',
+        name: 'Escudo de Energía',
+        description: 'Te protege de una caída al vacío por partida.',
+        levelRequired: 8,
+        cost: 5000,
+        icon: Icons.security,
+        state: SkillState.locked,
+        parentIds: ['power_jump'],
+        x: 0.7,
+        y: 0.8,
+      ),
+
+      // Ultimate - Time Warp
+      Skill(
+        id: 'time_warp',
+        name: 'Fisura Temporal',
+        description: 'Ralentiza el tiempo por 3 segundos.',
+        levelRequired: 15,
+        cost: 10000,
+        icon: Icons.hourglass_empty,
+        state: SkillState.locked,
+        parentIds: ['magnet', 'glide', 'shield'],
+        x: 0.95,
+        y: 0.5,
       ),
     ];
   }
